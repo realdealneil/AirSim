@@ -317,7 +317,9 @@ void VehiclePawnWrapper::setPose(const Pose& pose, bool ignore_collision)
     FString hit_name = FString("None");
     if (dist_hit.GetActor())
         hit_name=dist_hit.GetActor()->GetName();
-    UAirBlueprintLib::LogMessage(FString("Distance to "), hit_name+FString(": ")+FString::SanitizeFloat(distance_), LogDebugLevel::Informational);
+
+	float range_m = distance_*0.01;
+    UAirBlueprintLib::LogMessage(FString("Distance to "), hit_name+FString(": ")+FString::SanitizeFloat(range_m), LogDebugLevel::Informational);
 }
 
 void VehiclePawnWrapper::setDebugPose(const Pose& debug_pose)

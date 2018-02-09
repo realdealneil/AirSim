@@ -1,11 +1,12 @@
-#include "StandAloneSensors.hpp"
-#include "StandAlonePhysics.hpp"
-#include "StereoImageGenerator.hpp"
-#include "GaussianMarkovTest.hpp"
+//#include "StandAloneSensors.hpp"
+//#include "StandAlonePhysics.hpp"
+//#include "StereoImageGenerator.hpp"
+//#include "GaussianMarkovTest.hpp"
 #include "ImagesWithTruth.hpp"
 #include <iostream>
 #include <string>
 
+/*
 int runStandAloneSensors(int argc, const char *argv[])
 {
     if (argc < 2) {
@@ -67,7 +68,7 @@ void runSteroImageGenerator(int argc, const char *argv[])
         common_utils::FileSystem::combine(
             common_utils::FileSystem::getAppDataFolder(), "stereo_gen")
         : std::string(argv[2]));
-}
+}*/
 
 void runImagesWithTruth(int num_samples, std::string storage_path)
 {

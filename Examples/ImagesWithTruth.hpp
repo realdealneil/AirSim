@@ -38,7 +38,9 @@ public:
 
     int generate(int num_samples)
     {
-        msr::airlib::MultirotorRpcLibClient client;
+        
+//        msr::airlib::MultirotorRpcLibClient client;
+        msr::airlib::MultirotorRpcLibClient client("192.168.50.223");
         client.confirmConnection();
 
         msr::airlib::ClockBase* clock = msr::airlib::ClockFactory::get();

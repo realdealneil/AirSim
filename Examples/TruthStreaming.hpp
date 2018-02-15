@@ -13,6 +13,8 @@
 #include "vehicles/multirotor/controllers/DroneControllerBase.hpp"
 #include "RandomPointPoseGenerator.hpp"
 
+#include <opencv2/core/core.hpp>
+#include "gst-app-push.h"
 STRICT_MODE_OFF
 #ifndef RPCLIB_MSGPACK
 #define RPCLIB_MSGPACK clmdep_msgpack
@@ -29,9 +31,9 @@ STRICT_MODE_ON
 #define SAVE_FILES 0
 
 
-class ImagesWithTruthGenerator {
+class TruthStream {
 public:
-    ImagesWithTruthGenerator(std::string storage_dir)
+    TruthStream(std::string storage_dir)
         : storage_dir_(storage_dir)
     {
         FileSystem::ensureFolder(storage_dir);
@@ -50,9 +52,17 @@ public:
             std::ios::out | std::ios::in | std::ios_base::app);
 
         int sample = getImageCount(file_list);
+        
+        //! Create a gstreamer pusher:
+        GstAppPush::configOpts opt;
+        opt.iWidth = 256;
+        opt.iHeight = 144;
+        
+        GstAppPush pusher;
+        pusher.Start(opt);
 
         common_utils::ProsumerQueue<ImagesResult> results;
-        std::thread result_process_thread(processImages, & results);
+        std::thread result_process_thread(processImages, & results, &pusher);
 
         try {
             while(sample < num_samples) {
@@ -73,14 +83,7 @@ public:
 
 				
                 std::vector<ImageRequest> request = { 
-#if REQUEST_TYPE == REQUEST_JUST_LEFT
-					ImageRequest(0, ImageType::Scene, false, (SAVE_FILES==1))
-#elif REQUEST_TYPE == REQUEST_JUST_DEPTH
 					ImageRequest(0, ImageType::DepthPlanner, true, false)
-#elif REQUEST_TYPE == REQUEST_LEFT_AND_TRUTH
-					ImageRequest(0, ImageType::Scene, false, (SAVE_FILES==1)), 
-					ImageRequest(1, ImageType::DepthPlanner, true, false)
-#endif					
                 };
 
 				msr::airlib::Pose myPose = client.simGetPose();
@@ -91,11 +94,8 @@ public:
                 const std::vector<ImageResponse>& response = client.simGetImages(request);
 				
 				int correct_response_size = 1;
-#if REQUEST_TYPE == REQUEST_LEFT_AND_TRUTH
-				correct_response_size = 2;
-#endif
 				
-                if (response.size() != correct_response_size) {
+                if ((int)response.size() != correct_response_size) {
                     std::cout << "Images were not received!" << std::endl;
                     start_nanos = clock->nowNanos();
                     continue;
@@ -178,7 +178,7 @@ private:
         return sample;
     }
 
-    static void processImages(common_utils::ProsumerQueue<ImagesResult>* results)
+    static void processImages(common_utils::ProsumerQueue<ImagesResult>* results, GstAppPush *pusher)
     {
 		static int response_cnt = 0;
         while (!results->getIsDone()) {
@@ -192,40 +192,13 @@ private:
                 continue;
             }
 
-            auto process_time = clock->nowNanos();
-			
-#if REQUEST_TYPE == REQUEST_JUST_LEFT  || REQUEST_TYPE == REQUEST_LEFT_AND_TRUTH
-			std::string left_file_name = Utils::stringf("left_%06d.png", result.sample);
-#endif
-#if REQUEST_TYPE == REQUEST_JUST_DEPTH || REQUEST_TYPE == REQUEST_LEFT_AND_TRUTH
-			std::string depth_file_name  = Utils::stringf("depth_%06d.pfm", result.sample);
-#endif
-	
-			//static int last_count = response_cnt;
-			
-			//msr::airlib::ClockBase* clock = msr::airlib::ClockFactory::get();
-			
+            auto process_time = clock->nowNanos();			
 			static msr::airlib::TTimePoint lastAvgTime = clock->nowNanos();
 			static int last_response_cnt = response_cnt;
 		
-#if REQUEST_TYPE == REQUEST_JUST_LEFT
+
 	#if SAVE_FILES
-			saveImageToFile(result.response.at(0).image_data_uint8, 
-					FileSystem::combine(result.storage_dir_, left_file_name));
-			(*result.file_list) << left_file_name
-				<< "," << VectorMath::toString(result.position)
-				<< "," << VectorMath::toString(result.orientation)
-				<< "," << VectorMath::toString(result.velocity)
-				//<< "," << result.geoPoint.to_string()
-				<< std::endl;
-	#endif	
-	
-			//auto start_nanos = clock->nowNanos();
-			//result.render_time = clock->elapsedSince(start_nanos);;
-			//msr::airlib::TTimeDelta render_time;
-		
-#elif REQUEST_TYPE == REQUEST_JUST_DEPTH
-	#if SAVE_FILES
+			std::string depth_file_name  = Utils::stringf("depth_%06d.pfm", result.sample);
 			std::vector<float> depth_data = result.response.at(0).image_data_float;
 			Utils::writePfmFile(depth_data.data(), result.response.at(0).width, result.response.at(0).height,   
 				FileSystem::combine(result.storage_dir_, depth_file_name));	
@@ -236,23 +209,34 @@ private:
 				//<< "," << result.geoPoint.to_string()
 				<< std::endl;
 	#endif
+	
+			//! We have a float array.  Create a cv::Mat around it, convert to 8-bit, and publish using gstreamer:
+			//*/
+			cv::Mat floatMat(
+				result.response.at(0).height, 
+				result.response.at(0).width, 
+				CV_32F, 
+				result.response.at(0).image_data_float.data());
 			
-
-#elif REQUEST_TYPE == REQUEST_LEFT_AND_TRUTH
-	#if SAVE_FILES
-			saveImageToFile(result.response.at(0).image_data_uint8, 
-				FileSystem::combine(result.storage_dir_, left_file_name));
-			std::vector<float> depth_data = result.response.at(1).image_data_float;
-			Utils::writePfmFile(depth_data.data(), result.response.at(1).width, result.response.at(1).height,   
-				FileSystem::combine(result.storage_dir_, depth_file_name));	
-			(* result.file_list) << left_file_name << "," << depth_file_name 
-				<< "," << VectorMath::toString(result.position)
-				<< "," << VectorMath::toString(result.orientation)
-				<< "," << VectorMath::toString(result.velocity)
-				//<< "," << result.geoPoint.to_string()
-				<< std::endl;
-	#endif
-#endif
+			//! Convert to 8-bit:
+			cv::Mat img8bit;
+			floatMat.convertTo(img8bit, CV_8UC1, 8.0);
+		
+			pusher->PushImage(img8bit);
+			
+			//*/
+			
+			/*/
+			//! Test using a test image:
+			//! Do stuff
+			static uint8_t b = 0;
+			
+			//! Create an image and publish it!
+			cv::Size matSize = cv::Size(result.response.at(0).width, result.response.at(0).height);
+			pusher->PushImage(cv::Mat::ones(matSize, CV_8UC1)*b);
+			b += 5;
+			//*/
+			
 			if (response_cnt % 10 == 0) {			
 				msr::airlib::TTimeDelta dt = clock->elapsedSince(lastAvgTime);
 				lastAvgTime = clock->nowNanos();
@@ -262,9 +246,9 @@ private:
 				
 				std::cout << "Image #" << result.sample
 					<< " count: " << response_cnt
-					//<< " wxh: " << result.response.at(0).width << " x " << result.response.at(0).height
-					<< " Frame Rate: " << frameRate
-					<< " dt: " << dt
+					<< " wxh: " << result.response.at(0).width << " x " << result.response.at(0).height
+					//<< " Frame Rate: " << frameRate
+					//<< " dt: " << dt
 					//<< " VEL: " << VectorMath::toString(result.velocity)
 					//<< " pos:" << VectorMath::toString(result.position)
 					//<< " ori:" << VectorMath::toString(result.orientation)
@@ -272,8 +256,6 @@ private:
 					//<< " process time " << clock->elapsedSince(process_time) * 1E3f << " ms"
 					<< std::endl;
 			}
-			
-
         }
     }
 
@@ -283,37 +265,6 @@ private:
         file.write((char*) image_data.data(), image_data.size());
         file.close();
     }
-
-    /*static void convertToPlanDepth(std::vector<float>& image_data, int width, int height, float f = 320)
-    {
-        float center_i = width / 2.0f - 1;
-        float center_j = height / 2.0f - 1;
-
-        for (int i = 0; i < width; ++i) {
-            for (int j = 0; j < height; ++j) {
-                float dist = std::sqrt((i - center_i)*(i - center_i) + (j - center_j)*(j - center_j));
-                float denom = (dist / f);
-                denom *= denom;
-                denom = std::sqrt(1 + denom);
-                image_data[j * width + i] /= denom;
-            }
-        }
-    }*/
-
-    /*static void convertToDisparity(std::vector<float>& image_data, int width, int height, float f = 320, float baseline_meters = 1)
-    {
-        for (int i = 0; i < image_data.size(); ++i) {
-            image_data[i] = f * baseline_meters * (1.0f / image_data[i]);
-        }
-    }*/
-
-	/*
-    static void denormalizeDisparity(std::vector<float>& image_data, int width)
-    {
-        for (int i = 0; i < image_data.size(); ++i) {
-            image_data[i] = image_data[i] * width;
-        }
-    }*/
 
 };
 

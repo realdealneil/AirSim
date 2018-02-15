@@ -3,6 +3,7 @@
 //#include "StereoImageGenerator.hpp"
 //#include "GaussianMarkovTest.hpp"
 #include "ImagesWithTruth.hpp"
+//#include "TruthStreaming.hpp"
 #include <iostream>
 #include <string>
 
@@ -70,6 +71,7 @@ void runSteroImageGenerator(int argc, const char *argv[])
         : std::string(argv[2]));
 }*/
 
+//*// Uncomment for enabling storing truth images
 void runImagesWithTruth(int num_samples, std::string storage_path)
 {
 	ImagesWithTruthGenerator gen(storage_path);
@@ -84,6 +86,24 @@ void runImagesWithTruth(int argc, const char *argv[])
 			common_utils::FileSystem::getAppDataFolder(), "truth_images")
 		: std::string(argv[2]));
 }
+//*/
+
+/*//
+void runTruthStream(int num_samples, std::string storage_path)
+{
+	TruthStream gen(storage_path);
+	gen.generate(num_samples);
+}
+
+void runTruthStream(int argc, const char *argv[])
+{
+	runTruthStream(
+		argc < 2 ? 100000 : std::stoi(argv[1]),
+		argc < 3 ? common_utils::FileSystem::combine(
+			common_utils::FileSystem::getAppDataFolder(), "truth_images")
+		: std::string(argv[2]));
+}
+//*/
 
 int main(int argc, const char *argv[])
 {
@@ -95,5 +115,6 @@ int main(int argc, const char *argv[])
 	//runSteroImageGenerator(argc, argv);
 	
 	runImagesWithTruth(argc, argv);
+	//runTruthStream(argc, argv);
 }
 

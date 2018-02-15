@@ -55,8 +55,8 @@ public:
         
         //! Create a gstreamer pusher:
         GstAppPush::configOpts opt;
-        opt.iWidth = 244;
-        opt.iHeight = 156;
+        opt.iWidth = 256;
+        opt.iHeight = 144;
         
         GstAppPush pusher;
         pusher.Start(opt);
@@ -198,7 +198,7 @@ private:
 
             ImagesResult result;
             if (!results->tryPop(result)) {
-                clock->sleep_for(1);
+                clock->sleep_for(0.0001);
                 continue;
             }
 
@@ -248,13 +248,51 @@ private:
 	#endif
 	
 			//! We have a float array.  Create a cv::Mat around it, convert to 8-bit, and publish using gstreamer:
-			//cv::Mat floatMat(result.response.at(0).height, result.response.at(0).width, CV_32F, result.response.at(0).image_data_float);
+			//*/
+			cv::Mat floatMat(
+				result.response.at(0).height, 
+				result.response.at(0).width, 
+				CV_32F, 
+				result.response.at(0).image_data_float.data());
 			
 			//! Convert to 8-bit:
-			//cv::Mat img8bit;
-			//floatMat.convertTo(img8bit, CV_8UC1, 4.0);
+			cv::Mat img8bit;
+			floatMat.convertTo(img8bit, CV_8UC1, 8.0);
+		
+			pusher->PushImage(img8bit);
 			
-			//pusher.PushImage(img8bit);
+			//*/
+			
+			/*/
+			//! Test using a test image:
+			//! Do stuff
+			static uint8_t b = 0;
+			
+			//! Create an image and publish it!
+			cv::Size matSize = cv::Size(result.response.at(0).width, result.response.at(0).height);
+			pusher->PushImage(cv::Mat::ones(matSize, CV_8UC1)*b);
+			b += 5;
+			//*/
+			
+			if (response_cnt % 10 == 0) {			
+				msr::airlib::TTimeDelta dt = clock->elapsedSince(lastAvgTime);
+				lastAvgTime = clock->nowNanos();
+				
+				float frameRate = ((float)(response_cnt - last_response_cnt))/((float)dt);
+				last_response_cnt = response_cnt;			
+				
+				std::cout << "Image #" << result.sample
+					<< " count: " << response_cnt
+					<< " wxh: " << result.response.at(0).width << " x " << result.response.at(0).height
+					//<< " Frame Rate: " << frameRate
+					//<< " dt: " << dt
+					//<< " VEL: " << VectorMath::toString(result.velocity)
+					//<< " pos:" << VectorMath::toString(result.position)
+					//<< " ori:" << VectorMath::toString(result.orientation)
+					//<< " render time " << result.render_time * 1E3f << "ms" 
+					//<< " process time " << clock->elapsedSince(process_time) * 1E3f << " ms"
+					<< std::endl;
+			}
 
 #elif REQUEST_TYPE == REQUEST_LEFT_AND_TRUTH
 	#if SAVE_FILES
@@ -271,24 +309,7 @@ private:
 				<< std::endl;
 	#endif
 #endif
-			if (response_cnt % 10 == 0) {			
-				msr::airlib::TTimeDelta dt = clock->elapsedSince(lastAvgTime);
-				lastAvgTime = clock->nowNanos();
-				
-				float frameRate = ((float)(response_cnt - last_response_cnt))/((float)dt);
-				last_response_cnt = response_cnt;			
-				
-				std::cout << "Image #" << result.sample
-					<< " count: " << response_cnt
-					<< " Frame Rate: " << frameRate
-					<< " dt: " << dt
-					//<< " VEL: " << VectorMath::toString(result.velocity)
-					//<< " pos:" << VectorMath::toString(result.position)
-					//<< " ori:" << VectorMath::toString(result.orientation)
-					<< " render time " << result.render_time * 1E3f << "ms" 
-					<< " process time " << clock->elapsedSince(process_time) * 1E3f << " ms"
-					<< std::endl;
-			}
+			
 
         }
     }

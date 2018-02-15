@@ -10,6 +10,9 @@ IncludeEigen()
 SetupConsoleBuild()
 
 ## GStreamer 1.0 package required
+# This website was helpful in finding the right way to use pkgconfig in CMake for gstreamer:
+# https://lists.freedesktop.org/archives/gstreamer-devel/2016-October/061111.html
+
 find_package(PkgConfig)
 
 pkg_check_modules(GST REQUIRED gstreamer-1.0>=1.0

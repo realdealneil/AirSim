@@ -24,8 +24,6 @@
 
 #define DEBUGME 0
 
-//uint8_t b = 127;
-
 class GstAppPush
 {
 public:
@@ -81,7 +79,8 @@ public:
 	}
 	
 	void PushImage(const cv::Mat &img) {
-		img_ = img;
+		img.copyTo(img_);
+		//img_ = img;
 		imageUpdated = true;
 	}
 	
@@ -144,8 +143,8 @@ public:
 		//! Create pipeline: 
 		pipeline = gst_parse_launch(
 			"appsrc name = mysource ! "
-			"  queue ! "
-			"  autovideosink",
+			"queue ! "	
+			" autovideosink",
 			NULL);
 			
 		g_assert(pipeline);

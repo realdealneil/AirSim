@@ -9,8 +9,17 @@ IncludeEigen()
 
 SetupConsoleBuild()
 
+## GStreamer 1.0 package required
+find_package(PkgConfig)
+
+pkg_check_modules(GST REQUIRED gstreamer-1.0>=1.0
+							   gstreamer-app-1.0>=1.0)
+
+find_package( OpenCV REQUIRED )
+
 ## Specify additional locations of header files
 include_directories(
+  ${GST_INCLUDE_DIRS}
   ${AIRSIM_ROOT}/Examples
   ${AIRSIM_ROOT}/AirLib/include
   ${RPC_LIB_INCLUDES}
@@ -22,5 +31,9 @@ include_directories(
 AddExecutableSource()
 			
 CommonTargetLink()
-target_link_libraries(${PROJECT_NAME} AirLib)
-target_link_libraries(${PROJECT_NAME} ${RPC_LIB})
+target_link_libraries(${PROJECT_NAME} 
+	AirLib
+	${RPC_LIB}
+	${GST_LIBRARIES}
+	${OpenCV_LIBS}
+)

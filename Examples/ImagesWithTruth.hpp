@@ -12,6 +12,9 @@
 #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
 #include "vehicles/multirotor/controllers/DroneControllerBase.hpp"
 #include "RandomPointPoseGenerator.hpp"
+
+#include <opencv2/core/core.hpp>
+#include "gst-app-push.h"
 STRICT_MODE_OFF
 #ifndef RPCLIB_MSGPACK
 #define RPCLIB_MSGPACK clmdep_msgpack
@@ -23,9 +26,9 @@ STRICT_MODE_ON
 #define REQUEST_JUST_DEPTH 2
 #define REQUEST_LEFT_AND_TRUTH 3
 
-#define REQUEST_TYPE REQUEST_LEFT_AND_TRUTH
+#define REQUEST_TYPE REQUEST_JUST_DEPTH
 
-#define SAVE_FILES 1
+#define SAVE_FILES 0
 
 
 class ImagesWithTruthGenerator {
@@ -49,9 +52,17 @@ public:
             std::ios::out | std::ios::in | std::ios_base::app);
 
         int sample = getImageCount(file_list);
+        
+        //! Create a gstreamer pusher:
+        GstAppPush::configOpts opt;
+        opt.iWidth = 244;
+        opt.iHeight = 156;
+        
+        GstAppPush pusher;
+        pusher.Start(opt);
 
         common_utils::ProsumerQueue<ImagesResult> results;
-        std::thread result_process_thread(processImages, & results);
+        std::thread result_process_thread(processImages, & results, &pusher);
 
         try {
             while(sample < num_samples) {
@@ -177,7 +188,7 @@ private:
         return sample;
     }
 
-    static void processImages(common_utils::ProsumerQueue<ImagesResult>* results)
+    static void processImages(common_utils::ProsumerQueue<ImagesResult>* results, GstAppPush *pusher)
     {
 		static int response_cnt = 0;
         while (!results->getIsDone()) {
@@ -235,6 +246,15 @@ private:
 				//<< "," << result.geoPoint.to_string()
 				<< std::endl;
 	#endif
+	
+			//! We have a float array.  Create a cv::Mat around it, convert to 8-bit, and publish using gstreamer:
+			//cv::Mat floatMat(result.response.at(0).height, result.response.at(0).width, CV_32F, result.response.at(0).image_data_float);
+			
+			//! Convert to 8-bit:
+			//cv::Mat img8bit;
+			//floatMat.convertTo(img8bit, CV_8UC1, 4.0);
+			
+			//pusher.PushImage(img8bit);
 
 #elif REQUEST_TYPE == REQUEST_LEFT_AND_TRUTH
 	#if SAVE_FILES

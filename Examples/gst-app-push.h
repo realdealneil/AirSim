@@ -24,6 +24,8 @@
 
 #define DEBUGME 0
 
+#define DO_STREAMING 1
+
 class GstAppPush
 {
 public:
@@ -140,12 +142,31 @@ public:
 		gst_init(NULL, NULL);
 		loop = g_main_loop_new (NULL, TRUE);
 		
+#if DO_STREAMING
+		//! Create pipeline:
+		pipeline = gst_parse_launch(
+			"appsrc name = mysource ! "
+			"videoconvert ! "
+			"video/x-raw,format=I420 ! "			
+			"x264enc tune=zerolatency ! "
+			"rtph264pay ! "
+			"udpsink host=192.168.50.226 port=5004",
+			NULL);
+		
+		/*gst-launch-1.0 -v videotestsrc is-live=true do-timestamp=true ! \
+		 video/x-raw,format=GRAY8,width=256,height=144 ! \
+		 videoconvert ! video/x-raw,format=I420,width=256,height=144 ! \
+		 x264enc tune=zerolatency ! rtph264pay ! \
+		 udpsink host=192.168.50.226 port=5004*/
+		
+#else
 		//! Create pipeline: 
 		pipeline = gst_parse_launch(
 			"appsrc name = mysource ! "
 			"queue ! "	
 			" autovideosink",
 			NULL);
+#endif
 			
 		g_assert(pipeline);
 		

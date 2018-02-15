@@ -2,8 +2,8 @@
 //#include "StandAlonePhysics.hpp"
 //#include "StereoImageGenerator.hpp"
 //#include "GaussianMarkovTest.hpp"
-#include "ImagesWithTruth.hpp"
-//#include "TruthStreaming.hpp"
+//#include "ImagesWithTruth.hpp"
+#include "TruthStreaming.hpp"
 #include <iostream>
 #include <string>
 
@@ -71,7 +71,7 @@ void runSteroImageGenerator(int argc, const char *argv[])
         : std::string(argv[2]));
 }*/
 
-//*// Uncomment for enabling storing truth images
+/*// Uncomment for enabling storing truth images
 void runImagesWithTruth(int num_samples, std::string storage_path)
 {
 	ImagesWithTruthGenerator gen(storage_path);
@@ -88,7 +88,7 @@ void runImagesWithTruth(int argc, const char *argv[])
 }
 //*/
 
-/*//
+//*//
 void runTruthStream(int num_samples, std::string storage_path)
 {
 	TruthStream gen(storage_path);
@@ -114,7 +114,7 @@ int main(int argc, const char *argv[])
 	
 	//runSteroImageGenerator(argc, argv);
 	
-	runImagesWithTruth(argc, argv);
-	//runTruthStream(argc, argv);
+	//runImagesWithTruth(argc, argv);
+	runTruthStream(argc, argv);
 }
 

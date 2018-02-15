@@ -22,12 +22,6 @@ STRICT_MODE_OFF
 #include "rpc/rpc_error.h"
 STRICT_MODE_ON
 
-#define REQUEST_JUST_LEFT 1
-#define REQUEST_JUST_DEPTH 2
-#define REQUEST_LEFT_AND_TRUTH 3
-
-#define REQUEST_TYPE REQUEST_JUST_DEPTH
-
 #define SAVE_FILES 0
 
 

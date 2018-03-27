@@ -106,6 +106,20 @@ int VehiclePawnWrapper::getRemoteControlID() const
     return rc_settings.getInt("RemoteControlID", -1);
 }
 
+int VehiclePawnWrapper::getLidarForwardPitch() const
+{
+    typedef msr::airlib::AirSimSettings AirSimSettings;
+
+    //find out how far to bias lidar forward
+    AirSimSettings::VehicleSettings vehicle_settings =
+        AirSimSettings::singleton().getVehicleSettings(getVehicleConfigName());
+
+    msr::airlib::Settings settings;
+    vehicle_settings.getRawSettings(settings);
+
+    return settings.getInt("LidarForwardPitch", 0);
+}
+
 void VehiclePawnWrapper::initialize(APawn* pawn, const std::vector<APIPCamera*>& cameras, const WrapperConfig& config)
 {
     pawn_ = pawn;
@@ -307,18 +321,21 @@ void VehiclePawnWrapper::setPose(const Pose& pose, bool ignore_collision)
     }
 
     //update ray tracing
+    int range = 4000; //cm
     FVector start = getPosition();
-    FVector end = start - (pawn_->GetActorUpVector()) * 4000;
+    FVector aim = - pawn_->GetActorUpVector()
+	    .RotateAngleAxis(getLidarForwardPitch(), pawn_->GetActorRightVector());
+    FVector end = start + aim * range;
     FHitResult dist_hit = FHitResult(ForceInit);
 
     bool is_hit = UAirBlueprintLib::GetObstacle(pawn_, start, end, dist_hit);
-    distance_ = is_hit? dist_hit.Distance : 4000;
-
+    distance_ = is_hit? dist_hit.Distance : range;
     FString hit_name = FString("None");
+
     if (dist_hit.GetActor())
         hit_name=dist_hit.GetActor()->GetName();
 
-	float range_m = distance_*0.01;
+    float range_m = distance_*0.01;
     UAirBlueprintLib::LogMessage(FString("Distance to "), hit_name+FString(": ")+FString::SanitizeFloat(range_m), LogDebugLevel::Informational);
 }
 

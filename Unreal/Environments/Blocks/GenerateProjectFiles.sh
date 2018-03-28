@@ -14,14 +14,15 @@ if [[ ! -e "$UnrealDir" ]]; then
 fi
 
 if [ "$(uname)" == "Darwin" ]; then
-    # Call UnrealEngine shell scrpit
-    pushd "$UnrealDir/Engine/Build/BatchFiles/Mac/" >/dev/null
-    ./GenerateProjectFiles.sh "$SCRIPT_DIR/Blocks.uproject"
-    popd >/dev/null
+    OS=Mac
 else
-    echo "Not implemented"
-    exit 1
+    OS=Linux # Assume Linux
 fi
+
+# Call UnrealEngine shell scrpit
+pushd "$UnrealDir/Engine/Build/BatchFiles/$OS/" >/dev/null
+./GenerateProjectFiles.sh "$SCRIPT_DIR/Blocks.uproject"
+popd >/dev/null
 
 popd >/dev/null
 set +x

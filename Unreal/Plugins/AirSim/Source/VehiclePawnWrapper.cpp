@@ -324,7 +324,7 @@ void VehiclePawnWrapper::setPose(const Pose& pose, bool ignore_collision)
     int range = 4000; //cm
     FVector start = getPosition();
     FVector aim = - pawn_->GetActorUpVector()
-	    .RotateAngleAxis(getLidarForwardPitch(), pawn_->GetActorRightVector());
+	    .RotateAngleAxis(-getLidarForwardPitch(), pawn_->GetActorRightVector());
     FVector end = start + aim * range;
     FHitResult dist_hit = FHitResult(ForceInit);
 

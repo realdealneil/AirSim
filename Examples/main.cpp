@@ -1,11 +1,63 @@
+#ifdef _WIN32
 //#include "StandAloneSensors.hpp"
 //#include "StandAlonePhysics.hpp"
 //#include "StereoImageGenerator.hpp"
 //#include "GaussianMarkovTest.hpp"
 //#include "ImagesWithTruth.hpp"
+#include <cstdio>
+
+int main(int argc, const char *argv[])
+{
+    //using namespace msr::airlib;
+
+    //GaussianMarkovTest test;
+    //test.run();
+	
+	//runSteroImageGenerator(argc, argv);
+	
+	//runImagesWithTruth(argc, argv);
+	//runTruthStream(argc, argv);
+	printf("Windows example disabled currently.  \n");
+	return 0;
+}
+
+#elif defined( __linux__ )
+
 #include "TruthStreaming.hpp"
 #include <iostream>
 #include <string>
+void runTruthStream(int num_samples, std::string storage_path)
+{
+	TruthStream gen(storage_path);
+	gen.generate(num_samples);
+}
+
+void runTruthStream(int argc, const char *argv[])
+{
+	runTruthStream(
+		argc < 2 ? 100000 : std::stoi(argv[1]),
+		argc < 3 ? common_utils::FileSystem::combine(
+			common_utils::FileSystem::getAppDataFolder(), "truth_images")
+		: std::string(argv[2]));
+}
+//*/
+
+int main(int argc, const char *argv[])
+{
+    using namespace msr::airlib;
+
+    //GaussianMarkovTest test;
+    //test.run();
+	
+	//runSteroImageGenerator(argc, argv);
+	
+	//runImagesWithTruth(argc, argv);
+	runTruthStream(argc, argv);
+}
+#endif
+
+
+
 
 /*
 int runStandAloneSensors(int argc, const char *argv[])
@@ -89,32 +141,5 @@ void runImagesWithTruth(int argc, const char *argv[])
 //*/
 
 //*//
-void runTruthStream(int num_samples, std::string storage_path)
-{
-	TruthStream gen(storage_path);
-	gen.generate(num_samples);
-}
 
-void runTruthStream(int argc, const char *argv[])
-{
-	runTruthStream(
-		argc < 2 ? 100000 : std::stoi(argv[1]),
-		argc < 3 ? common_utils::FileSystem::combine(
-			common_utils::FileSystem::getAppDataFolder(), "truth_images")
-		: std::string(argv[2]));
-}
-//*/
-
-int main(int argc, const char *argv[])
-{
-    using namespace msr::airlib;
-
-    //GaussianMarkovTest test;
-    //test.run();
-	
-	//runSteroImageGenerator(argc, argv);
-	
-	//runImagesWithTruth(argc, argv);
-	runTruthStream(argc, argv);
-}
 

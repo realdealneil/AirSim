@@ -669,7 +669,7 @@ public:
 
 	distance_sensor.min_distance = static_cast<uint16_t>(min_distance);
 	distance_sensor.max_distance = static_cast<uint16_t>(max_distance);
-	distance_sensor.current_distance = static_cast<uint16_t>(current_distance);
+	distance_sensor.current_distance = static_cast<uint16_t>(current_distance*100.0); //! Distance is in meters, convert to cm in this packet
 	distance_sensor.type = static_cast<uint8_t>(sensor_type);
 	distance_sensor.id = static_cast<uint8_t>(sensor_id);
 	distance_sensor.orientation = static_cast<uint8_t>(orientation);

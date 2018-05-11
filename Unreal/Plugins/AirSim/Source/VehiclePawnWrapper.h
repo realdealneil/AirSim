@@ -90,7 +90,7 @@ public: //interface
     std::string getVehicleConfigName() const;
 
     int getRemoteControlID() const;
-    int getLidarForwardPitch() const;
+    float getLidarForwardPitch() const;
 
 protected:
     UPROPERTY(VisibleAnywhere)

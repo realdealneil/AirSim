@@ -106,7 +106,7 @@ int VehiclePawnWrapper::getRemoteControlID() const
     return rc_settings.getInt("RemoteControlID", -1);
 }
 
-int VehiclePawnWrapper::getLidarForwardPitch() const
+float VehiclePawnWrapper::getLidarForwardPitch() const
 {
     typedef msr::airlib::AirSimSettings AirSimSettings;
 
@@ -117,7 +117,7 @@ int VehiclePawnWrapper::getLidarForwardPitch() const
     msr::airlib::Settings settings;
     vehicle_settings.getRawSettings(settings);
 
-    return settings.getInt("LidarForwardPitch", 0);
+    return settings.getFloat("LidarForwardPitch", 0);
 }
 
 void VehiclePawnWrapper::initialize(APawn* pawn, const std::vector<APIPCamera*>& cameras, const WrapperConfig& config)
@@ -321,22 +321,26 @@ void VehiclePawnWrapper::setPose(const Pose& pose, bool ignore_collision)
     }
 
     //update ray tracing
-    int range = 4000; //cm
-    FVector start = getPosition();
-    FVector aim = - pawn_->GetActorUpVector()
-	    .RotateAngleAxis(getLidarForwardPitch(), pawn_->GetActorRightVector());
-    FVector end = start + aim * range;
-    FHitResult dist_hit = FHitResult(ForceInit);
+    int range = 40; //m
+	float angleRad = getLidarForwardPitch() * M_PI / 180.0;
 
-    bool is_hit = UAirBlueprintLib::GetObstacle(pawn_, start, end, dist_hit);
-    distance_ = is_hit? dist_hit.Distance : range;
+	Vector3r start = pose.position;
+	Eigen::AngleAxis<float> laserOrientation(angleRad, Eigen::Vector3f::UnitY());
+	Vector3r unitVec = VectorMath::rotateVector(Vector3r(0, 0, 1), msr::airlib::Quaternionr(laserOrientation), true);
+	Vector3r end = start + VectorMath::rotateVector(unitVec, pose.orientation, true) * range;
+	FHitResult dist_hit = FHitResult(ForceInit);
+
+	bool is_hit = UAirBlueprintLib::GetObstacle(pawn_, NedTransform::toNeuUU(start), NedTransform::toNeuUU(end), dist_hit);
+	distance_ = is_hit ? dist_hit.Distance / 100.0f : range;
+
     FString hit_name = FString("None");
 
     if (dist_hit.GetActor())
         hit_name=dist_hit.GetActor()->GetName();
 
-    float range_m = distance_*0.01;
+	float range_m = distance_; // *0.01;
     UAirBlueprintLib::LogMessage(FString("Distance to "), hit_name+FString(": ")+FString::SanitizeFloat(range_m), LogDebugLevel::Informational);
+	UAirBlueprintLib::LogMessage(FString("LidarAngle: "), FString::SanitizeFloat(angleRad*180.0 / M_PI), LogDebugLevel::Informational);
 }
 
 void VehiclePawnWrapper::setDebugPose(const Pose& debug_pose)

@@ -30,7 +30,7 @@ struct DistanceSimpleParams {
 
 */
     //TODO: update sigma based on documentation, maybe as a function increasing with measured distance
-    real_T unnorrelated_noise_sigma = 0.002f * 100;
+    real_T unnorrelated_noise_sigma = 0.001f;
     //jMavSim uses below
     //real_T unnorrelated_noise_sigma = 0.1f;
 
